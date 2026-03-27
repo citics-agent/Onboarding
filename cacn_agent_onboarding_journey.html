@@ -1,0 +1,413 @@
+
+<style>
+  :root {
+    --agent-bg: #EEEDFE; --agent-border: #AFA9EC; --agent-text: #3C3489;
+    --sys-bg: #E1F5EE; --sys-border: #5DCAA5; --sys-text: #085041;
+    --cacn-bg: #FAEEDA; --cacn-border: #EF9F27; --cacn-text: #633806;
+    --gate-bg: #FCEBEB; --gate-border: #E24B4A; --gate-text: #791F1F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans, system-ui); }
+  .wrap { padding: 0 0 2rem; }
+  .pipeline-header { display: flex; gap: 2px; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 4px; }
+  .phase-pill {
+    flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+    padding: 10px 14px; border-radius: 8px; cursor: pointer; border: 1px solid var(--color-border-tertiary);
+    background: var(--color-background-secondary); transition: all .15s;
+    min-width: 88px; position: relative;
+  }
+  .phase-pill:hover { border-color: var(--color-border-primary); }
+  .phase-pill.active { background: var(--color-background-info); border-color: var(--color-border-info); }
+  .phase-pill.active .pnum { color: var(--color-text-info); }
+  .phase-pill.active .pname { color: var(--color-text-info); }
+  .pnum { font-size: 11px; color: var(--color-text-tertiary); font-weight: 500; margin-bottom: 4px; }
+  .pname { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-align: center; line-height: 1.3; }
+  .arrow-sep { display: flex; align-items: center; color: var(--color-text-tertiary); font-size: 12px; padding: 0 1px; align-self: center; flex: 0 0 auto; }
+
+  .detail-card {
+    border: 0.5px solid var(--color-border-tertiary); border-radius: 12px;
+    overflow: hidden; background: var(--color-background-primary);
+  }
+  .detail-header {
+    padding: 16px 20px 14px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .detail-header-left {}
+  .detail-phase-num { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; margin-bottom: 4px; }
+  .detail-phase-name { font-size: 16px; font-weight: 500; color: var(--color-text-primary); }
+  .detail-phase-desc { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.5; max-width: 600px; }
+  .detail-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+  .badge-sys { background: var(--sys-bg); color: var(--sys-text); }
+  .badge-agent { background: var(--agent-bg); color: var(--agent-text); }
+  .badge-cacn { background: var(--cacn-bg); color: var(--cacn-text); }
+  .badge-gate { background: var(--gate-bg); color: var(--gate-text); }
+  .sla-badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--color-background-secondary); color: var(--color-text-secondary); font-weight: 500; white-space: nowrap; }
+
+  .swimlanes { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+  .lane { padding: 16px 20px; border-right: 0.5px solid var(--color-border-tertiary); }
+  .lane:last-child { border-right: none; }
+  .lane-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .lane-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+  .lane-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-tertiary); }
+  .task-item { display: flex; gap: 8px; margin-bottom: 8px; }
+  .task-icon { font-size: 14px; flex: 0 0 auto; margin-top: 1px; }
+  .task-text { font-size: 13px; color: var(--color-text-primary); line-height: 1.5; }
+  .task-sub { font-size: 12px; color: var(--color-text-secondary); line-height: 1.4; margin-top: 2px; }
+  .tech-row {
+    margin: 0 20px 14px;
+    padding: 12px 14px; border-radius: 8px;
+    background: var(--color-background-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-left: 3px solid var(--sys-border);
+  }
+  .tech-label { font-size: 11px; font-weight: 500; color: var(--sys-text); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .tech-list { font-size: 12px; color: var(--color-text-secondary); line-height: 1.7; }
+  .gate-row {
+    margin: 0 20px 14px;
+    padding: 12px 14px; border-radius: 8px;
+    background: var(--gate-bg); border: 0.5px solid var(--gate-border);
+    display: flex; gap: 10px;
+  }
+  .gate-icon { font-size: 16px; flex: 0 0 auto; }
+  .gate-content {}
+  .gate-label { font-size: 11px; font-weight: 500; color: var(--gate-text); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .gate-text { font-size: 12px; color: var(--gate-text); line-height: 1.5; }
+  .nav-row { display: flex; gap: 8px; padding: 14px 20px 0; border-top: 0.5px solid var(--color-border-tertiary); }
+  .nav-btn { padding: 7px 14px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: transparent; cursor: pointer; font-size: 13px; color: var(--color-text-secondary); font-family: inherit; transition: all .15s; }
+  .nav-btn:hover { background: var(--color-background-secondary); }
+  .nav-btn.next { background: var(--color-background-info); color: var(--color-text-info); border-color: var(--color-border-info); }
+  .legend { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-secondary); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+
+<div class="wrap">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7F77DD"></div>Agent thực hiện</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div>System tự động</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#BA7517"></div>CACN / Ops xử lý thủ công</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>Decision gate</div>
+  </div>
+
+  <div class="pipeline-header" id="pipeline"></div>
+  <div class="detail-card" id="detail"></div>
+</div>
+
+<script>
+const PHASES = [
+  {
+    id: 0, code: "P0", name: "Nguồn tuyển", sla: "—",
+    desc: "Agent tiếp cận CACN từ các kênh tuyển dụng khác nhau. Giai đoạn này xác định nguồn gốc để đo hiệu quả kênh và phân bổ nguồn lực.",
+    badges: ["agent","sys"],
+    agent: [
+      { icon: "→", text: "Tiếp nhận thông tin qua kênh", sub: "Landing page, mạng xã hội, sự kiện offline, referral từ Store/Agent, CACN trực tiếp" }
+    ],
+    system: [
+      { icon: "→", text: "Gắn UTM source vào form đăng ký", sub: "Ghi nhận kênh nguồn: utm_source, utm_medium, ref_code (nếu referral)" },
+      { icon: "→", text: "Tạo Lead record trên CRM", sub: "Status: NEW — chưa xác thực" }
+    ],
+    cacn: [
+      { icon: "→", text: "Thiết kế nội dung tuyển dụng theo kênh", sub: "Phân bổ ngân sách kênh dựa trên conversion rate lịch sử" }
+    ],
+    tech: "API: POST /leads {source, ref_code, utm_*}. CRM tự tạo lead_id. Dedup theo phone ngay từ đầu. Referral: link kênh → commission tracking về sau.",
+    gate: null
+  },
+  {
+    id: 1, code: "P1", name: "Pre-screening", sla: "≤ 24 giờ",
+    desc: "Agent điền form đăng ký sơ bộ. Hệ thống tự động lọc điều kiện cơ bản để tránh tốn nguồn lực xử lý hồ sơ không đủ điều kiện.",
+    badges: ["agent","sys","gate"],
+    agent: [
+      { icon: "→", text: "Điền form đăng ký sơ bộ (online)", sub: "Họ tên, CCCD, ngày sinh, số điện thoại, tỉnh/thành phố, kinh nghiệm bất động sản (tuỳ chọn)" },
+      { icon: "→", text: "Xác thực OTP qua số điện thoại", sub: "Bước này đảm bảo số điện thoại thực và người dùng có kiểm soát" }
+    ],
+    system: [
+      { icon: "→", text: "Auto-validate: tuổi ≥ 18, phone hợp lệ, vùng phủ của CACN", sub: "Nếu FAIL → hiển thị thông báo cụ thể, lưu vào nurture queue" },
+      { icon: "→", text: "Blacklist check: CCCD & SĐT", sub: "Đối chiếu với danh sách đã bị thu hồi/vi phạm" },
+      { icon: "→", text: "Duplicate check: SĐT đã tồn tại?", sub: "Nếu có → flag 'returning agent' để CACN xử lý riêng" },
+      { icon: "→", text: "Gửi email/SMS xác nhận tiếp nhận", sub: "Bao gồm link để tiếp tục quy trình đăng ký" }
+    ],
+    cacn: [
+      { icon: "→", text: "Review hồ sơ duplicate/flagged cuối ngày", sub: "Batch review — không cản trở luồng Agent bình thường" }
+    ],
+    tech: "Endpoint: POST /registrations/pre-screen. Validation rules: age_check(CCCD_dob), phone_format_vn, city_coverage, blacklist_db, duplicate_phone. Response: {status: 'pass'|'fail'|'flag', reason?}. SMS/Email: trigger sau pass. Nurture queue: riêng biệt, re-engage sau 30 ngày.",
+    gate: "PASS: Đủ điều kiện → tạo tài khoản | FAIL: Thông báo lý do cụ thể → nurture queue | FLAG: Tồn tại → CACN xét thủ công trong 24h"
+  },
+  {
+    id: 2, code: "P2", name: "Tạo tài khoản", sla: "Tức thì",
+    desc: "Agent tạo tài khoản chính thức trên Citics Agent App. Đây là điểm Agent bắt đầu 'sống' trong hệ thống với trạng thái pending.",
+    badges: ["agent","sys"],
+    agent: [
+      { icon: "→", text: "Tải app & tạo tài khoản", sub: "Điền: mật khẩu, ảnh đại diện, thông tin cá nhân bổ sung" },
+      { icon: "→", text: "Upload ảnh CCCD (mặt trước/sau)", sub: "OCR tự động điền thông tin — Agent xác nhận lại" }
+    ],
+    system: [
+      { icon: "→", text: "OCR xử lý CCCD, trích xuất: họ tên, ngày sinh, địa chỉ", sub: "Auto-fill vào profile. Confidence score < 80% → yêu cầu Agent nhập tay" },
+      { icon: "→", text: "Tạo agent_id duy nhất, status = PENDING", sub: "Agent chưa active — chưa thể thực hiện giao dịch" },
+      { icon: "→", text: "Log audit trail: thời gian, IP, device_id", sub: "Phục vụ dispute resolution và compliance" }
+    ],
+    cacn: [],
+    tech: "API: POST /agents. OCR: Viettel/FPT ID service hoặc AWS Textract. agent_id: UUID v4. Status machine: PENDING → CLASSIFIED → CONTRACTED → TRAINING → CERTIFIED → ACTIVE → SUSPENDED/REVOKED. Tất cả status transitions phải có timestamp + actor_id trong audit_log.",
+    gate: null
+  },
+  {
+    id: 3, code: "P3", name: "Phân loại Agent", sla: "≤ 30 phút",
+    desc: "Hệ thống và CACN phân loại Agent để route vào đúng track đào tạo và xác định role phù hợp. Bước này ảnh hưởng trực tiếp đến tốc độ kích hoạt.",
+    badges: ["agent","sys","cacn"],
+    agent: [
+      { icon: "→", text: "Điền bảng khảo sát nhanh (8–10 câu)", sub: "Kinh nghiệm BDS (năm), loại BDS từng làm, mục tiêu tham gia, Store hiện tại nếu có, thành thạo kỹ năng nào" }
+    ],
+    system: [
+      { icon: "→", text: "Auto-score profile theo rule engine", sub: "Score 0–100: kinh nghiệm, kỹ năng, loại BDS, mục tiêu" },
+      { icon: "→", text: "Gắn tag phân loại tự động", sub: "NEW_AGENT (0–40), EXPERIENCED (41–70), POTENTIAL_STORE_LEAD (71+)" },
+      { icon: "→", text: "Route vào track đào tạo tương ứng", sub: "New → full track | Experienced → fast track | PSL → fast track + Store module" }
+    ],
+    cacn: [
+      { icon: "→", text: "Review agent tagged POTENTIAL_STORE_LEAD", sub: "Xác nhận & chỉ định track phù hợp trong 30 phút" },
+      { icon: "→", text: "Identify high-value agent để tiếp cận thêm", sub: "Xây dựng relationship ngay từ đầu với potential Store Lead" }
+    ],
+    tech: "Rule engine: configurable scoring rubric (không hard-code — CACN có thể điều chỉnh weight qua admin panel). Output: {classification, score, recommended_track, recommended_roles[]}. CACN override API: PATCH /agents/{id}/classification với audit log.",
+    gate: "POTENTIAL_STORE_LEAD: CACN confirm trong 30 phút | Nếu không confirm → auto-route vào EXPERIENCED track"
+  },
+  {
+    id: 4, code: "P4", name: "Chọn Role & Store", sla: "Agent chọn",
+    desc: "Agent đăng ký role muốn tham gia và được gắn vào Store. Đây là bước xác lập 'vị trí' của Agent trong mạng lưới CACN.",
+    badges: ["agent","sys","cacn"],
+    agent: [
+      { icon: "→", text: "Xem danh sách role khả dụng (theo phân loại)", sub: "Buyer Agent, Listing Agent, Mortgage Agent, Multi-service (nếu đủ điều kiện)" },
+      { icon: "→", text: "Chọn role(s) muốn đăng ký", sub: "Có thể chọn nhiều role nếu track cho phép — tối đa 2 role ban đầu" },
+      { icon: "→", text: "Chọn Store hoặc xin gắn Store", sub: "Browse danh sách Store theo khu vực, hoặc có mã Store từ Store Lead" }
+    ],
+    system: [
+      { icon: "→", text: "Filter role list theo classification", sub: "NEW_AGENT chỉ thấy single-service roles. Fast track thấy multi-service." },
+      { icon: "→", text: "Validate store capacity & geographic match", sub: "Store đã full → hiển thị waitlist. Mismatch khu vực → cảnh báo" },
+      { icon: "→", text: "Gửi notification cho Store Lead về Agent mới", sub: "Store Lead có thể accept/reject trong 24h" }
+    ],
+    cacn: [
+      { icon: "→", text: "Xử lý agent chưa có Store (orphan agents)", sub: "Assign vào Store mặc định hoặc tạo cohort chờ phân bổ" },
+      { icon: "→", text: "Override store assignment khi cần", sub: "Ví dụ: agent có conflict of interest với Store đang chọn" }
+    ],
+    tech: "Store capacity: configurable max_agents per store tier. Store Lead notification: push + in-app. Timeout 24h: nếu Store không respond → auto-accept. Agent có thể add thêm role sau khi active (qua request flow riêng).",
+    gate: "Store reject: CACN assign vào store khác hoặc waitlist | Store capacity full: waitlist queue với ETA"
+  },
+  {
+    id: 5, code: "P5", name: "E-sign HĐ", sla: "≤ 24 giờ",
+    desc: "Agent ký hợp đồng hợp tác điện tử. Đây là căn cứ pháp lý để CACN ghi nhận quyền lợi và xử lý tranh chấp. Toàn bộ quy trình online.",
+    badges: ["agent","sys","cacn"],
+    agent: [
+      { icon: "→", text: "Nhận & đọc hợp đồng hợp tác trên app", sub: "Hiển thị đầy đủ điều khoản: role, store, commission structure, code of conduct" },
+      { icon: "→", text: "Xác nhận đồng ý bằng OTP & chữ ký điện tử", sub: "Sử dụng OTP SMS + vẽ chữ ký trên app hoặc dịch vụ e-sign tích hợp" }
+    ],
+    system: [
+      { icon: "→", text: "Generate contract dựa trên role + store + thời điểm ký", sub: "Template động: điền tên, CCCD, role, store, ngày ký, version policy" },
+      { icon: "→", text: "Lưu contract PDF signed, hash SHA-256 để verify", sub: "Upload lên secure storage, gắn vào agent_id" },
+      { icon: "→", text: "Update status: PENDING → CONTRACTED", sub: "Agent chưa thể vào training cho đến khi ký xong" }
+    ],
+    cacn: [
+      { icon: "→", text: "Batch review contracts bất thường (nếu có)", sub: "VD: agent ký ở giờ bất thường, IP khác lạ — alert system flag tự động" }
+    ],
+    tech: "E-sign options: tích hợp VNPT-eSign hoặc FPT.eSign (có giá trị pháp lý VN). Fallback: OTP-based consent với digital fingerprint. Contract storage: S3-compatible với versioning. Status trigger: ký xong → webhook → unlock training modules.",
+    gate: "Timeout 24h không ký: reminder tự động x2, sau đó CACN gọi điện | Từ chối ký: lead closed, có thể reopen sau 30 ngày"
+  },
+  {
+    id: 6, code: "P6", name: "Đào tạo lý thuyết", sla: "3–5 ngày",
+    desc: "Agent hoàn thành bộ module đào tạo online bắt buộc. Hệ thống mở module theo thứ tự, track tiến độ và nhắc nhở chủ động.",
+    badges: ["agent","sys"],
+    agent: [
+      { icon: "→", text: "Học module M1: Citics & CACN Overview", sub: "Tổng quan mô hình, vai trò CACN, role network, cooperation rules" },
+      { icon: "→", text: "Học module M2: Role & Responsibilities", sub: "Chi tiết về role đã đăng ký: quyền hạn, giới hạn, KPI tối thiểu" },
+      { icon: "→", text: "Học module M3: Platform & App Guide", sub: "Hướng dẫn sử dụng Citics Agent App từ A–Z" },
+      { icon: "→", text: "Học module M4: Commission & Incentives", sub: "Cách ghi nhận doanh thu, cooperation split, điều kiện nhận commission" },
+      { icon: "→", text: "Học module M5: Code of Conduct & Disputes", sub: "Quy tắc mạng lưới, các hành vi bị nghiêm cấm, quy trình khiếu nại" }
+    ],
+    system: [
+      { icon: "→", text: "Unlock module tuần tự — M1 → M2 → M3 → M4 → M5", sub: "Không được skip, phải hoàn thành module trước mới mở module sau" },
+      { icon: "→", text: "Track % completion, thời gian xem, tốc độ skip", sub: "Flag nếu agent 'click next' quá nhanh — không đọc kỹ" },
+      { icon: "→", text: "Push reminder: 24h, 48h, 72h nếu chưa hoàn thành", sub: "D+5 vẫn chưa xong → alert Store Lead để coaching" }
+    ],
+    cacn: [],
+    tech: "LMS: tích hợp hoặc build in-app (video + text + quiz nhỏ trong module). Track: time_spent_per_module, completion_rate, speed_flag (< 60s per page). Fast-track agents: skip M1, M3 — chỉ học M2, M4, M5. Module content quản lý qua CMS — CACN tự cập nhật không cần dev.",
+    gate: "Speed flag (đọc < 60s/trang): gắn note 'low engagement', ảnh hưởng score đào tạo | D+5 chưa xong: Store Lead coaching intervention"
+  },
+  {
+    id: 7, code: "P7", name: "Kiểm tra lý thuyết", sla: "≤ 1 ngày",
+    desc: "Agent làm bài kiểm tra online. Hệ thống tự động chấm điểm và cấp chứng nhận lý thuyết. Có cơ chế retry với adaptive question pool.",
+    badges: ["agent","sys","cacn"],
+    agent: [
+      { icon: "→", text: "Làm bài kiểm tra trắc nghiệm (30 câu, 45 phút)", sub: "Bao gồm: quy tắc mạng lưới, role responsibilities, commission logic, xử lý tình huống" },
+      { icon: "→", text: "Nhận kết quả ngay sau khi nộp bài", sub: "Xem đáp án sai + giải thích — học từ lỗi sai" }
+    ],
+    system: [
+      { icon: "→", text: "Random 30 câu từ question bank (>200 câu)", sub: "Mỗi lần retry: bộ câu hỏi khác nhau — không thể học thuộc" },
+      { icon: "→", text: "Auto-grade, lưu kết quả với timestamp & proctoring data", sub: "Anti-cheat: tab switching detection, time anomaly flag" },
+      { icon: "→", text: "Score ≥ 80%: cấp 'Theory Certificate', unlock practical", sub: "Score < 80%: cho retry, trừ điểm engagement score" }
+    ],
+    cacn: [
+      { icon: "→", text: "Review agent fail 3 lần liên tiếp", sub: "Quyết định: extend retry, require coaching session, hoặc flag for review" }
+    ],
+    tech: "Question bank: admin panel để CACN/training team quản lý câu hỏi, tag theo module, độ khó. Retry policy: max 3 lần tự động, lần 4+ cần CACN unlock. Anti-cheat: basic (tab switch, copy-paste, time < 5s/câu). Score stored immutable với hash.",
+    gate: "< 80% lần 1: retry ngay | < 80% lần 2: 24h cooldown + gợi ý ôn lại | Fail lần 3: CACN intervention | CACN quyết định: unlock thêm hoặc suspend quy trình"
+  },
+  {
+    id: 8, code: "P8", name: "Đào tạo thực hành", sla: "5–7 ngày",
+    desc: "Agent hoàn thành các tác vụ thực hành trên hệ thống thật. Bước này đảm bảo Agent biết dùng platform trước khi active, đồng thời tạo dữ liệu chất lượng ban đầu.",
+    badges: ["agent","sys","cacn"],
+    agent: [
+      { icon: "→", text: "Buyer track: Book 1 tour thật trên hệ thống", sub: "Tìm kiếm, chọn bất động sản, điền form booking, xác nhận lịch với khách" },
+      { icon: "→", text: "Listing track: Submit 1 listing đủ tiêu chuẩn", sub: "Điền đầy đủ thông tin, upload ảnh đủ chuẩn, chọn giá hợp lý" },
+      { icon: "→", text: "Mortgage track: Shadow 1 consultation session", sub: "Tham gia cùng senior agent, sau đó ghi chú tóm tắt vào hệ thống" }
+    ],
+    system: [
+      { icon: "→", text: "Checklist tác vụ thực hành hiển thị trong app", sub: "Tracking: task_completed, quality_score (do system + Store check)" },
+      { icon: "→", text: "Validate chất lượng listing tự động", sub: "Kiểm tra: đủ ảnh (≥5), diện tích hợp lệ, giá trong range thị trường" },
+      { icon: "→", text: "Gửi notification cho Store Lead để review tác vụ Agent", sub: "Store Lead confirm: approve/reject với comment" }
+    ],
+    cacn: [
+      { icon: "→", text: "Random quality check 10% tác vụ thực hành", sub: "Đảm bảo Store không approve hàng loạt mà không check thật" }
+    ],
+    tech: "Practical task engine: task_type (booking/listing/shadow), status (pending/submitted/approved/rejected), reviewer_id, quality_score. Listing quality algo: image count, completeness_score, price_reasonableness (vs market data). Store Lead review SLA: 24h — nếu không review → auto-escalate CACN.",
+    gate: "Listing rejected: Agent sửa và resubmit (tối đa 3 lần) | Tour không confirm: Agent reschedule | CACN quality check fail: yêu cầu làm lại"
+  },
+  {
+    id: 9, code: "P9", name: "Xét duyệt & chứng nhận", sla: "≤ 4 giờ",
+    desc: "CACN review tổng hợp và cấp chứng nhận chính thức. Là checkpoint cuối trước khi Agent chính thức active. Mục tiêu: system auto-approve ≥ 80% trường hợp.",
+    badges: ["sys","cacn","gate"],
+    agent: [
+      { icon: "→", text: "Nhận thông báo kết quả xét duyệt", sub: "App notification + email: đậu / chờ / cần bổ sung" }
+    ],
+    system: [
+      { icon: "→", text: "Tổng hợp điều kiện: contract ✓, theory ≥80% ✓, practical ✓", sub: "Nếu đủ 3 điều kiện → Auto-approve, status = CERTIFIED" },
+      { icon: "→", text: "Với agent chưa đủ 1 điều kiện: route sang CACN review queue", sub: "Flag lý do cụ thể để CACN xử lý nhanh" }
+    ],
+    cacn: [
+      { icon: "→", text: "Review queue của flagged agents trong 4 giờ", sub: "Quyết định: approve với note / yêu cầu bổ sung / từ chối" },
+      { icon: "→", text: "Cấp CACN Certification Level (L1/L2/L3)", sub: "L1: single role | L2: multi-role | L3: lifecycle advisor — dựa trên score tổng hợp" }
+    ],
+    tech: "Auto-approval engine: all_conditions_met → PATCH /agents/{id}/status {status: CERTIFIED, cert_level, cert_date}. CACN review dashboard: filter by reason_code, SLA countdown per item. Cert_level stored immutable — upgrade qua flow riêng sau khi active.",
+    gate: "Auto-approve (≥ 80% cases): đủ điều kiện → CERTIFIED tự động | Manual review: CACN respond trong 4h | Từ chối: lý do rõ ràng, có lộ trình khắc phục"
+  },
+  {
+    id: 10, code: "P10", name: "Gắn Store & kích hoạt", sla: "≤ 1 giờ",
+    desc: "CACN xác nhận Store, hệ thống kích hoạt role và KPI. Đây là điểm cuối của onboarding — Agent chính thức là một phần của mạng lưới CACN.",
+    badges: ["sys","cacn"],
+    agent: [
+      { icon: "→", text: "Nhận welcome package từ CACN", sub: "Email + in-app: role được kích hoạt, Store được gắn, KPI tối thiểu, người liên hệ hỗ trợ" },
+      { icon: "→", text: "Onboarding call với Store Lead (optional)", sub: "Store Lead chào mừng, giới thiệu nhóm, hướng dẫn deal đầu tiên" }
+    ],
+    system: [
+      { icon: "→", text: "Tạo Agent profile trong Store, gắn Store ID", sub: "store_agent table: agent_id, store_id, role_ids[], joined_date, status=ACTIVE" },
+      { icon: "→", text: "Kích hoạt role(s) với KPI tối thiểu", sub: "KPI gắn theo role + store_tier. D0 metric baseline được set" },
+      { icon: "→", text: "Gửi notification cho Store Lead: agent mới đã active", sub: "Include: agent profile link, role, KPI target, onboarding completion score" },
+      { icon: "→", text: "Bắt đầu tracking: D1, D7, D30 activity milestones", sub: "Hệ thống tự động alert nếu không có activity sau D7" }
+    ],
+    cacn: [
+      { icon: "→", text: "Final confirm Store assignment trước khi activate", sub: "Đặc biệt với Potential Store Lead — assign vào đúng Store chiến lược" }
+    ],
+    tech: "Activation endpoint: POST /agents/{id}/activate {store_id, role_ids, kpi_config}. KPI config: từ CACN_rule_engine (theo role + store_level). Milestone tracking: D1 (first login), D7 (first activity), D30 (retention check). Store Lead notification: push + dashboard badge count.",
+    gate: null
+  },
+  {
+    id: 11, code: "P11", name: "Active Operation", sla: "Liên tục",
+    desc: "Agent bắt đầu vận hành trong CACN. Giai đoạn này thuộc Store operations & CACN monitoring — không còn là onboarding. CACN theo dõi sức khoẻ mạng lưới theo tuần.",
+    badges: ["agent","sys","cacn"],
+    agent: [
+      { icon: "→", text: "Thực hiện deal đầu tiên trong 30 ngày", sub: "KPI D30: ít nhất 1 activity ghi nhận hệ thống (booking/listing/consultation)" },
+      { icon: "→", text: "Hợp tác với Agent khác (cooperation deal)", sub: "Mục tiêu: ≥ 10% deal có ≥ 2 Agent phối hợp" }
+    ],
+    system: [
+      { icon: "→", text: "Monitor KPI theo tuần: active rate, deal count, cooperation rate", sub: "Alert Store Lead nếu agent không có activity trong 14 ngày" },
+      { icon: "→", text: "Chạy D90 retention check tự động", sub: "Agent còn active sau 90 ngày → flag 'retained' trong reporting" }
+    ],
+    cacn: [
+      { icon: "→", text: "Review network health dashboard hàng tuần", sub: "KPI: cooperation rate ≥ 10%, agent active rate ≥ 40%, vi phạm < 3%" },
+      { icon: "→", text: "Xử lý tranh chấp và vi phạm khi phát sinh", sub: "Attribution disputes, cut-bridge cases, code of conduct violations" }
+    ],
+    tech: "Weekly health report: automated. Dispute flow: POST /disputes {type, reporter_id, subject_id, evidence[]}. Role suspension: PATCH /agents/{id}/roles/{role_id} {status: SUSPENDED, reason}. All state changes: audit_log với actor + timestamp.",
+    gate: null
+  }
+];
+
+let current = 0;
+
+function renderPipeline() {
+  const el = document.getElementById('pipeline');
+  let html = '';
+  PHASES.forEach((p, i) => {
+    if (i > 0) html += `<div class="arrow-sep">›</div>`;
+    html += `<div class="phase-pill ${i === current ? 'active' : ''}" onclick="showPhase(${i})">
+      <span class="pnum">${p.code}</span>
+      <span class="pname">${p.name}</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderDetail() {
+  const p = PHASES[current];
+  const badgeMap = {
+    agent: '<span class="badge badge-agent">Agent</span>',
+    sys: '<span class="badge badge-sys">System</span>',
+    cacn: '<span class="badge badge-cacn">CACN / Ops</span>',
+    gate: '<span class="badge badge-gate">Decision gate</span>'
+  };
+  const badges = p.badges.map(b => badgeMap[b]).join('');
+
+  function renderTasks(list) {
+    if (!list.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);font-style:italic;">Không có tác vụ trong bước này</p>';
+    return list.map(t => `<div class="task-item">
+      <span class="task-icon" style="color:var(--color-text-secondary)">${t.icon}</span>
+      <div><div class="task-text">${t.text}</div><div class="task-sub">${t.sub}</div></div>
+    </div>`).join('');
+  }
+
+  const gateHtml = p.gate ? `<div class="gate-row">
+    <span class="gate-icon">◆</span>
+    <div><div class="gate-label">Decision gate</div><div class="gate-text">${p.gate}</div></div>
+  </div>` : '';
+
+  const techHtml = p.tech ? `<div class="tech-row">
+    <div class="tech-label">Tech notes</div>
+    <div class="tech-list">${p.tech}</div>
+  </div>` : '';
+
+  const prev = current > 0 ? `<button class="nav-btn" onclick="showPhase(${current-1})">← ${PHASES[current-1].code} ${PHASES[current-1].name}</button>` : '';
+  const next = current < PHASES.length - 1 ? `<button class="nav-btn next" onclick="showPhase(${current+1})">${PHASES[current+1].code} ${PHASES[current+1].name} →</button>` : '';
+
+  document.getElementById('detail').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-header-left">
+        <div class="detail-phase-num">${p.code} · Bước ${current + 1} / ${PHASES.length}</div>
+        <div class="detail-phase-name">${p.name}</div>
+        <div class="detail-phase-desc">${p.desc}</div>
+        <div class="detail-badges">${badges}<span class="sla-badge">SLA: ${p.sla}</span></div>
+      </div>
+    </div>
+    <div class="swimlanes">
+      <div class="lane">
+        <div class="lane-header"><div class="lane-dot" style="background:#7F77DD"></div><span class="lane-title">Agent thực hiện</span></div>
+        ${renderTasks(p.agent)}
+      </div>
+      <div class="lane">
+        <div class="lane-header"><div class="lane-dot" style="background:#1D9E75"></div><span class="lane-title">System tự động</span></div>
+        ${renderTasks(p.system)}
+      </div>
+      <div class="lane">
+        <div class="lane-header"><div class="lane-dot" style="background:#BA7517"></div><span class="lane-title">CACN / Ops xử lý</span></div>
+        ${renderTasks(p.cacn)}
+      </div>
+    </div>
+    ${gateHtml}
+    ${techHtml}
+    <div class="nav-row">${prev}${next}</div>
+  `;
+}
+
+function showPhase(i) {
+  current = i;
+  renderPipeline();
+  renderDetail();
+}
+
+showPhase(0);
+</script>
